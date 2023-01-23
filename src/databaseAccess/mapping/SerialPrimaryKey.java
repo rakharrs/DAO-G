@@ -1,4 +1,4 @@
-package databaseAccess.annotation;
+package databaseAccess.mapping;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,7 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface View {
-    String name();
+@Target(ElementType.FIELD)
+public @interface SerialPrimaryKey {
 }

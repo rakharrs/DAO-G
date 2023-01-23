@@ -1,15 +1,17 @@
 package databaseAccess;
 
-import databaseAccess.annotation.PrimaryKey;
-import databaseAccess.annotation.View;
 import databaseAccess.exception.DAOException;
+import databaseAccess.mapping.PrimaryKey;
+import databaseAccess.mapping.View;
+import databaseAccess.utils.Misc;
 
 import java.lang.reflect.Field;
-import java.sql.*;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
-
-import static databaseAccess.utils.Misc.convertForSql;
-import static databaseAccess.utils.Misc.toUpperFirstChar;
 
 public class DAO extends DAC{
 
@@ -19,19 +21,22 @@ public class DAO extends DAC{
      * @param value new value of the column
      * @param columnLabel name of the column that will be updated
      * @param tabname name of the table
-     * @throws Exception If there is an error with the SQL query or database connection, or if the method invocation fails.
+     * @throws SQLException If there is an error with the SQL query or database connection
      * @return number of rows affected by the update query.
      */
-    public int update(Connection con, Object value, String columnLabel, String tabname) throws Exception{
+    public int update(Connection con, Object value, String columnLabel, String tabname)
+            throws NoSuchMethodException, SQLException, InvocationTargetException, IllegalAccessException {
         StringBuilder reference = new StringBuilder("where ");
         String[] attributes = getFieldsName(this);
         for(int i = 0; i < attributes.length; ++i){
-            Object attrb = this.getClass().getMethod("get"+toUpperFirstChar(attributes[i])).invoke(this);
-            reference.append(attributes[i]).append("= ").append(convertForSql(attrb)).append(" ");
+            Object attrb = this.getClass().getMethod("get"+ Misc.toUpperFirstChar(attributes[i])).invoke(this);
+            reference.append(attributes[i]).append("= ").append(Misc.convertForSql(attrb)).append(" ");
             if(i+1<attributes.length) reference.append("and ");
         }
         return update(con, value, columnLabel, tabname, reference.toString());
     }
+
+
 
 
     /**
@@ -39,18 +44,22 @@ public class DAO extends DAC{
      * @param tabName   the name of the table
      * @param con       the connection which will be used
      */
-    public void insert(String tabName, Connection con) throws Exception{
+    public int insert(String tabName, Connection con) throws Exception{
         if(this.getClass().isAnnotationPresent(View.class))
             throw new Exception("Can't insert into a view !");
-        insert(con, tabName, this);
+        return insert(con, tabName, this);
     }
 
+
+
+
     /**
-     * build a specific primary key for this object depending on this object field
+     * build a specific primary key for this object depending on this object primary key annotation
      * @param con the connection that will be used
      * @return the built primary key
      */
-    public String buildPrimaryKey(Connection con) throws DAOException, SQLException {
+    public String buildPrimaryKey(Connection con)
+            throws DAOException, SQLException {
         ArrayList<Field> fields = getDAFields(this);
         for(Field field : fields){
             if(field.isAnnotationPresent(PrimaryKey.class) && field.getType() == String.class){
@@ -60,16 +69,25 @@ public class DAO extends DAC{
         }throw new DAOException("No buildable primary key");
     }
 
-    private String constructPrimaryKey(Connection con, PrimaryKey pk) throws DAOException, SQLException {
+
+
+
+
+
+    protected String constructPrimaryKey(Connection con, PrimaryKey pk)
+            throws DAOException, SQLException {
         String val = "";
         String pkSeq = buildSequenceNb(con, pk);
         String prefix = pk.prefix();
-        if(pk.prefix()==null) throw new DAOException("No buildable primary key");
+        if(pk.prefix()==null)
+            throw new DAOException("No buildable primary key");
         val+=prefix; val+=pkSeq;
         return val;
     }
 
-    private String buildSequenceNb(Connection con, PrimaryKey pk) throws DAOException, SQLException {
+
+    protected String buildSequenceNb(Connection con, PrimaryKey pk)
+            throws DAOException, SQLException {
         StringBuilder pkSeq = new StringBuilder(new String());
         String seq = getSequence(con, pk);
         for (int i = 0; i < pk.length()-pk.prefix().length()-seq.length(); i++) pkSeq.append("0");
@@ -78,7 +96,9 @@ public class DAO extends DAC{
         return pkSeq.toString();
     }
 
-    private String getSequence(Connection con, PrimaryKey pk) throws DAOException, SQLException {
+
+    protected String getSequence(Connection con, PrimaryKey pk)
+            throws DAOException, SQLException {
         if(pk.sequence()==null){
             throw new DAOException("No buildable primary key");
         }

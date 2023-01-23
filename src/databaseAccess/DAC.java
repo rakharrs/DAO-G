@@ -1,6 +1,7 @@
 package databaseAccess;
 
-import databaseAccess.annotation.Ignore;
+import databaseAccess.mapping.Ignore;
+import databaseAccess.mapping.SerialPrimaryKey;
 import databaseAccess.utils.Misc;
 
 import java.lang.reflect.Field;
@@ -8,7 +9,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static databaseAccess.utils.Misc.convertForSql;
 import static databaseAccess.utils.Misc.toUpperFirstChar;
@@ -16,9 +16,8 @@ import static databaseAccess.utils.Misc.toUpperFirstChar;
 // Database access connection (for connection)
 class DAC {
     private static Connection connection = null;
-    protected static final String DriverClassName = "org.postgresql.Driver";
-    protected static final String url = "jdbc:postgresql://localhost:5432/star?user=postgres&password=pixel";
-
+    private static final String DriverClassName = "org.postgresql.Driver";
+    private static final String url = "jdbc:postgresql://localhost:5432/garagerodolphe?user=postgres&password=pixel";
 
     /**
      * Create connection for the jdbc identified by
@@ -146,7 +145,7 @@ class DAC {
      * @param obj  object that will be used to create the arraylist
      * @return ArrayList containing the results of the query
      * @throws SQLException If there is an error with the SQL query or database connection
-     * @throws InvocationTargetException if the underlying method throws an da.exception.
+     * @throws InvocationTargetException if the underlying method throws a da.exception.
      * @throws NoSuchMethodException if a matching method is not found.
      * @throws InstantiationException if this Class represents an abstract class, an interface, an array class, a primitive type, or void; or if the class has no nullary constructor; or if the instantiation fails for some other reason.
      * @throws IllegalAccessException if this Class represents an abstract class, an interface, an array class, a primitive type, or void; or if the class has no nullary constructor; or if the instantiation fails for some other reason.
@@ -168,10 +167,21 @@ class DAC {
         return val;
     }
 
+    public static String[] getForInsertFieldsName(Object obj){
+        ArrayList<Field> fields = getDAFields(obj);
+        String[] val = new String[fields.size()];
+        for (int i = 0; i < val.length; i++)
+            if(!val.getClass().isAnnotationPresent(SerialPrimaryKey.class)){
+                val[i] = fields.get(i).getName();
+            }
+        return val;
+    }
+
     public static int insert(Connection con, String tabName, Object obj) throws SQLException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Statement st = con.createStatement();
-        String[] fieldsName = getFieldsName(obj);
-        String into = Misc.TabToString(","+ Arrays.toString(fieldsName));
+        String[] fieldsName = getForInsertFieldsName(obj);
+        String into = Misc.TabToString(",", fieldsName);
+        System.out.println("into : "+into);
         StringBuilder insert = new StringBuilder("INSERT INTO " + tabName + "(" + into + ") VALUES (");
         for (int i = 0; i < fieldsName.length; i++) {
             Object attrb = obj.getClass().getMethod("get"+toUpperFirstChar(fieldsName[i])).invoke(obj);
@@ -202,7 +212,7 @@ class DAC {
         }
     }
 
-    public static void setConnection(Connection connection) {
+    private static void setConnection(Connection connection) {
         DAC.connection = connection;
     }
 }

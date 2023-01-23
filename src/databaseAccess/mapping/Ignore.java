@@ -1,4 +1,4 @@
-package databaseAccess.annotation;
+package databaseAccess.mapping;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,6 +7,5 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface ForeignKey {
-    Class<?> type();
+public @interface Ignore {
 }
